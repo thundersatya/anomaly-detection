@@ -1,0 +1,23 @@
+prometheus_url: "http://localhost:8080/actuator/prometheus"  # or use node_exporter/prometheus if pulling remotely
+check_interval_sec: 60
+
+rules:
+  - name: "High API latency"
+    query: 'rate(http_server_requests_seconds_sum{uri!="/actuator/prometheus", status=~"2.."}[1m]) / rate(http_server_requests_seconds_count{uri!="/actuator/prometheus", status=~"2.."}[1m])'
+    action: "restart_app.sh"
+
+  - name: "Spike in 5xx errors"
+    query: 'increase(http_server_requests_seconds_count{status=~"5.."}[5m])'
+    action: "restart_app.sh"
+
+  - name: "Low request throughput"
+    query: 'rate(http_server_requests_seconds_count{status=~"2.."}[1m])'
+    action: "log_warning.sh"
+
+  - name: "High GC pause"
+    query: 'rate(jvm_gc_pause_seconds_sum[5m])'
+    action: "log_warning.sh"
+
+  - name: "Memory usage > 80%"
+    query: '(jvm_memory_used_bytes{area="heap"} / jvm_memory_max_bytes{area="heap"}) * 100'
+    action: "restart_app.sh"
